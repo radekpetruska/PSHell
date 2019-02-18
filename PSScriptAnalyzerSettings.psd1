@@ -75,7 +75,7 @@
             ExportedOnly = $false
             BlockComment = $true
             VSCodeSnippetCorrection = $true
-            Placement = "before"
+            Placement = "begin"
         }
     }
 }
