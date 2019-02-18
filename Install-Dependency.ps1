@@ -19,6 +19,9 @@
     .EXAMPLE
     Install-Dependency.ps1 -Path .\Script.psm1 -LimitMajorVersion
     Installs script dependencies. If no maximum allowed version is specified, the script automatically adds maximum version constraint to prevent installing modules with breaking changes.
+    .EXAMPLE
+    Install-Dependency.ps1 -Path .\Module.psd1 -InformationAction Continue
+    Installs module dependencies and displays information about installed modules.
 #>
 [CmdletBinding()]
 param(
