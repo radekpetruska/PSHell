@@ -1,27 +1,30 @@
 <#
-    .SYNOPSIS
+.SYNOPSIS
     Installs script or module dependencies based on '#requires -Module' statements or module manifests.
-    .EXAMPLE
+.EXAMPLE
     Install-Dependency.ps1 -Path .\Script.ps1
     Installs script dependencies defined by '#requires -Module' statements. Module is installed for current user only.
-    .EXAMPLE
+.EXAMPLE
     Install-Dependency.ps1 -Path .\Module.psd1
     Installs module dependencies defined by module manifest (manifest is specified directly). Module is installed for current user only.
-    .EXAMPLE
+.EXAMPLE
     Install-Dependency.ps1 -Path .\Module
     Installs module dependencies defined by module manifest (manifest is located by parent's name). Module is installed for current user only.
-    .EXAMPLE
+.EXAMPLE
     Install-Dependency.ps1 -Path .\ScriptModule.psm1, .\Script.ps1, .\Module -Scope AllUsers
     Installs dependencies of all given items. Modules are installed globally for all users.
-    .EXAMPLE
+.EXAMPLE
     Install-Dependency.ps1 -Path .\ScriptModule.psm1 -Scope CurrentUser -Repository PSGallery, UntrustedRepository
     Installs script module dependencies. Dependencies could be installed from given repositories even if repositories are not trusted. Module is installed for current user only.
-    .EXAMPLE
+.EXAMPLE
     Install-Dependency.ps1 -Path .\Script.psm1 -LimitMajorVersion
     Installs script dependencies. If no maximum allowed version is specified, the script automatically adds maximum version constraint to prevent installing modules with breaking changes.
-    .EXAMPLE
+.EXAMPLE
     Install-Dependency.ps1 -Path .\Module.psd1 -InformationAction Continue
     Installs module dependencies and displays information about installed modules.
+.EXAMPLE
+    Install-Dependency.ps1 -Path ".\Module.psd1|.\Script.ps1" -AdditionalPathDelimiter "|"
+    Installs module dependencies of both Module.psd1 and Script.ps1. Paths must be delimited by a character defined in 'AdditionalPathDelimiter'.
 #>
 [CmdletBinding()]
 param(
@@ -44,6 +47,9 @@ param(
     # Repositories from which modules could be installed (defaults to all trusted repositories)
     [string[]] $Repository = (Get-PSRepository | ? -Property "InstallationPolicy" -EQ -Value "Trusted" | select -ExpandProperty "Name"),
 
+    # Optional delimiter that is applied on each item of 'Path' to get all paths (useful in CI/CD systems that are not able to provide multiple values using array syntax)
+    [string] $AdditionalPathDelimiter,
+
     # Limit major version in order to avoid breaking changes in installed modules
     [switch] $LimitMajorVersion
 )
@@ -56,7 +62,7 @@ $script:RequiresModuleStatementRegex = [regex]::new("^\s*#requires\s+-modules?\s
 
 function Test-Line {
     <#
-        .SYNOPSIS
+    .SYNOPSIS
         Tests whether given line represents '#requires -Module' statement.
     #>
     param(
@@ -71,7 +77,7 @@ function Test-Line {
 
 function ConvertTo-ModuleDefinition {
     <#
-        .SYNOPSIS
+    .SYNOPSIS
         Converts hashtable with module reference (as used in '#requires -Module' statement or in module manifest)
         to a hashtable with module definition which can be used as parameter for Install-Module cmdlet.
     #>
@@ -106,7 +112,7 @@ function ConvertTo-ModuleDefinition {
 
 function Get-ModuleDefinition {
     <#
-        .SYNOPSIS
+    .SYNOPSIS
         Extracts module definition from '#requires -Module' statement.
         The definition can be used as parameter for Install-Module cmdlet.
     #>
@@ -138,7 +144,7 @@ function Get-ModuleDefinition {
 
 function Test-ModuleCompliance {
     <#
-        .SYNOPSIS
+    .SYNOPSIS
         Tests whether the given module complies name and version requirements.
     #>
     param(
@@ -171,7 +177,7 @@ function Test-ModuleCompliance {
 
 function Format-VersionConstraint {
     <#
-        .SYNOPSIS
+    .SYNOPSIS
         Returns version constraint defined in module definition in printable format.
     #>
     param(
@@ -198,7 +204,7 @@ function Format-VersionConstraint {
 
 function Install-Dependency {
     <#
-        .SYNOPSIS
+    .SYNOPSIS
         Installs module dependency defined by given module definition.
     #>
     param(
@@ -227,7 +233,7 @@ function Install-Dependency {
 
 function Install-ScriptFileDependency {
     <#
-        .SYNOPSIS
+    .SYNOPSIS
         Installs script file module dependencies defined by '#requires -Module' statements.
     #>
     param(
@@ -252,7 +258,7 @@ function Install-ScriptFileDependency {
 
 function Install-ManifestFileDependency {
     <#
-        .SYNOPSIS
+    .SYNOPSIS
         Installs module dependencies defined by module manifest.
     #>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("PSAvoidUsingInvokeExpression", "",
@@ -297,7 +303,7 @@ function Install-ManifestFileDependency {
 
 function Select-DependencyInstaller {
     <#
-        .SYNOPSIS
+    .SYNOPSIS
         Selects proper dependency installer based on the type of given item.
     #>
     param(
@@ -332,6 +338,13 @@ function Select-DependencyInstaller {
     }
     else {
         Write-Warning -Message "No item available on path '$Path'."
+    }
+}
+
+# Multiple paths might be concatenated into a single string. Perform additional split.
+if (-not [string]::IsNullOrEmpty($AdditionalPathDelimiter)) {
+    $Path = $Path | % {
+        return $PSItem -split $AdditionalPathDelimiter, 0, "SimpleMatch"
     }
 }
 
