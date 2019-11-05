@@ -224,7 +224,7 @@ function Install-Dependency {
     }
 
     Write-Information "Installing module '$ModuleName, $VersionConstraint'."
-    Install-Module @ModuleDefinition -Scope $script:Scope -Repository $script:Repository -Force
+    Install-Module @ModuleDefinition -Scope $script:Scope -Repository $script:Repository -AllowClobber -Force
 
     # Since previously installed module could installed other dependencies that might be required later,
     # refresh the list of already installed modules.
