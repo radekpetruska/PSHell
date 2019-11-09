@@ -269,6 +269,10 @@ function Install-ManifestFileDependency {
         [string] $FilePath
     )
 
+    # Resolve to absolute path. Later in the function, when searching for nested modules, 'Split-Path -Parent' would return null for 'Something.psd1'
+    # and then 'Join-Path' would fail because it would try to join null with path to nested module which is prohibited.
+    $FilePath = (Resolve-Path -Path $FilePath).Path
+
     [hashtable] $Manifest = Invoke-Expression -Command (Get-Content -Path $FilePath -Raw)
 
     if ($Manifest.ContainsKey("RequiredModules")) {
